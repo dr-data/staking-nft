@@ -17,6 +17,10 @@ contract Minter is Ownable {
 
     receive() external payable {}
 
+    function setToken(address _token) external onlyOwner {
+        token = IToken(_token);
+    }
+
     function tokenToMint() public view returns (address) {
         return address(token);
     }

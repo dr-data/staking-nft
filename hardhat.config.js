@@ -8,7 +8,7 @@ module.exports = {
   solidity: {
     version: '0.8.3',
     settings: {
-      // evmVersion: 'istanbul',
+      // evmVersion: 'london',
       optimizer: {
         enabled: true,
         runs: 999999,

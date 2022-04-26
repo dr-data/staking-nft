@@ -8,7 +8,9 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IMinter.sol";
 
-contract NFTStaking is Ownable, IERC721Receiver {
+import "hardhat/console.sol";
+
+contract NftChef is Ownable, IERC721Receiver {
     /* ========== STATE VARIABLES ========== */
 
     // NFT 스테이킹 구조체
@@ -20,7 +22,7 @@ contract NFTStaking is Ownable, IERC721Receiver {
     }
 
     // 민팅 권한을 가진  컨트랙트
-    IMinter minter;
+    IMinter public minter;
 
     // [NFT][ID] => Stake
     mapping(address => mapping(uint256 => Stake)) public vault;
@@ -165,6 +167,7 @@ contract NFTStaking is Ownable, IERC721Receiver {
     }
 
     function setMinter(address _minter) external onlyOwner {
+        console.log("set minter", address(minter), "to", _minter);
         minter = IMinter(_minter);
     }
 
