@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IToken.sol";
 
 contract Minter is Ownable {
-    IToken token;
+    IToken public token;
 
     mapping(address => bool) private _minters;
 
@@ -16,6 +16,10 @@ contract Minter is Ownable {
     }
 
     receive() external payable {}
+
+    function tokenToMint() public view returns (address) {
+        return address(token);
+    }
 
     function transferTokenOwner(address _owner) external onlyOwner {
         Ownable(address(token)).transferOwnership(_owner);

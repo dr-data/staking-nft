@@ -4,4 +4,6 @@ pragma solidity 0.8.3;
 
 interface IMinter {
     function mintFor(address _to, uint256 _amount) external;
+
+    function tokenToMint() external view returns (address);
 }

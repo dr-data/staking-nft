@@ -1,15 +1,7 @@
-# Basic Sample Hardhat Project
+# NFT Staking Contract
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+## `NftChef.sol`
 
-Try running some of the following tasks:
+- NFT 스테이킹으로 리워드를 지급하는 컨트랙트
 
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
-```
+- 파트너 NFT 컬렉션 추가 가능

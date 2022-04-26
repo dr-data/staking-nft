@@ -9,57 +9,110 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IMinter.sol";
 
 contract NFTStaking is Ownable, IERC721Receiver {
-    uint256 public totalStaked;
+    /* ========== STATE VARIABLES ========== */
 
-    // struct to store a stake's token, owner, and earning values
+    // NFT 스테이킹 구조체
     struct Stake {
         uint24 tokenId;
-        uint48 timestamp;
+        uint256 timestamp; // 흠.. 락업,,
         uint256 lastHarvest;
         address owner;
     }
 
-    // reference to the Block NFT contract
-    IERC20 token;
+    // 민팅 권한을 가진  컨트랙트
     IMinter minter;
 
-    // maps erc721 contract, tokenId to stake
+    // [NFT][ID] => Stake
     mapping(address => mapping(uint256 => Stake)) public vault;
-    //
+
+    // 분배 비율 변경 전 리워드 분배 비율 저장
+    mapping(address => uint256) public rewardPerSecondStored;
+
+    // 분배 비율 변경 시점
+    mapping(address => uint256) public lastUpdate;
+
+    // 현 리워드 분배 비율
     mapping(address => uint256) public rewardPerSecond;
+
+    // 해당 NFT 컬렉션이 리워드 풀로 존재하는 지 확인
     mapping(address => bool) public poolExists;
-    //
+
+    // 스테이킹 된 NFT 수량
+    mapping(address => uint256) public totalStaked;
+
+    // 리워드 시작 시점
     uint256 public startTime;
 
+    /* ========== EVENTS ========== */
+
     event NFTStaked(address owner, address collection, uint256 tokenId, uint256 value);
-    event NFTUnstaked(address owner, uint256 tokenId, uint256 value);
+    event NFTUnstaked(address owner, address collection, uint256 tokenId, uint256 value);
     event Claimed(address owner, uint256 amount);
 
-    constructor(IERC20 _token) {
-        token = _token;
+    /* ========== INITIALIZER ========== */
+
+    /* ========== VIEWS ========== */
+
+    function isPoolExists(address _collection) public view returns (bool) {
+        return poolExists[_collection];
     }
 
-    function addCollection(address _collection, uint256 _rewardPerSecond) external onlyOwner {
-        require(_collection != address(0));
-        require(poolExists[_collection] == false, "Pool already exists");
-
-        poolExists[_collection] = true;
-        rewardPerSecond[_collection] = _rewardPerSecond;
+    function rewardToken() public view returns (address) {
+        return minter.tokenToMint();
     }
 
-    function setCollection(address _collection, uint256 _rewardPerSecond) external onlyOwner {
-        require(_collection != address(0));
-        require(poolExists[_collection] == true, "Pool does not exist");
+    function earned(address _collection, uint256[] calldata tokenIds) external view returns (uint256 amount) {
+        uint256 tokenId;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            tokenId = tokenIds[i];
+            Stake memory staked = vault[_collection][tokenId];
+            require(staked.owner == msg.sender, "not an owner");
 
-        rewardPerSecond[_collection] = _rewardPerSecond;
+            uint256 reward;
+            uint256 startTimeStamp = startTime < staked.lastHarvest ? staked.lastHarvest : startTime;
+
+            if (startTimeStamp < lastUpdate[_collection] && lastUpdate[_collection] < block.timestamp) {
+                reward =
+                    rewardPerSecondStored[_collection] *
+                    (lastUpdate[_collection] - startTimeStamp) +
+                    rewardPerSecond[_collection] *
+                    (block.timestamp - lastUpdate[_collection]);
+            } else {
+                reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
+            }
+            amount += reward;
+        }
     }
+
+    // 가스비 많이 드니까 컨트랙트에서 부르지 않기
+    function tokensOfOwner(address account, address _collection) public view returns (uint256[] memory ownerTokens) {
+        uint256 supply = totalStaked[_collection];
+        uint256[] memory tmp = new uint256[](supply);
+
+        uint256 index = 0;
+        for (uint256 tokenId = 1; tokenId <= supply; tokenId++) {
+            if (vault[_collection][tokenId].owner == account) {
+                tmp[index] = vault[_collection][tokenId].tokenId;
+                index += 1;
+            }
+        }
+
+        uint256[] memory tokens = new uint256[](index);
+        for (uint256 i = 0; i < index; i++) {
+            tokens[i] = tmp[i];
+        }
+
+        return tokens;
+    }
+
+    /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stake(address _collection, uint256[] calldata tokenIds) external {
         require(poolExists[_collection] == true, "Pool does not exist");
         require(tokenIds.length > 0, "No tokenIds provided");
 
         uint256 tokenId;
-        // totalStaked += tokenIds.length;
+        totalStaked[_collection] += tokenIds.length;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             tokenId = tokenIds[i];
             require(IERC721(_collection).ownerOf(tokenId) == msg.sender, "not your token");
@@ -71,7 +124,7 @@ contract NFTStaking is Ownable, IERC721Receiver {
             vault[_collection][tokenId] = Stake({
                 owner: msg.sender,
                 tokenId: uint24(tokenId),
-                timestamp: uint48(block.timestamp),
+                timestamp: uint256(block.timestamp),
                 lastHarvest: block.timestamp
             });
         }
@@ -91,84 +144,65 @@ contract NFTStaking is Ownable, IERC721Receiver {
         _claim(_collection, tokenIds);
     }
 
+    /* ========== ADMIN FUNCITONS ======== */
+
+    function addCollection(address _collection, uint256 _rewardPerSecond) external onlyOwner {
+        require(_collection != address(0));
+        require(poolExists[_collection] == false, "Pool already exists");
+
+        poolExists[_collection] = true;
+        rewardPerSecond[_collection] = _rewardPerSecond;
+    }
+
+    function setCollection(address _collection, uint256 _rewardPerSecond) external onlyOwner {
+        require(_collection != address(0));
+        require(poolExists[_collection] == true, "Pool does not exist");
+
+        rewardPerSecondStored[_collection] = rewardPerSecond[_collection];
+        lastUpdate[_collection] = block.timestamp;
+
+        rewardPerSecond[_collection] = _rewardPerSecond;
+    }
+
+    function setMinter(address _minter) external onlyOwner {
+        minter = IMinter(_minter);
+    }
+
+    /* ========== INTERNAL FUNCTIONS ========== */
+
     function _claim(address _collection, uint256[] calldata tokenIds) internal {
+        require(startTime < block.timestamp, "Claim has not started");
         uint256 tokenId;
-        uint256 total = 0;
+        uint256 amount;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             tokenId = tokenIds[i];
             Stake storage staked = vault[_collection][tokenId];
             require(staked.owner == msg.sender, "not an owner");
 
             // start
-            uint256 timeElasped;
-            if (staked.lastHarvest > startTime) {
-                timeElasped = block.timestamp - staked.lastHarvest;
+            uint256 reward;
+            uint256 startTimeStamp = startTime < staked.lastHarvest ? staked.lastHarvest : startTime;
+
+            if (startTimeStamp < lastUpdate[_collection] && lastUpdate[_collection] < block.timestamp) {
+                reward =
+                    rewardPerSecondStored[_collection] *
+                    (lastUpdate[_collection] - startTimeStamp) +
+                    rewardPerSecond[_collection] *
+                    (block.timestamp - lastUpdate[_collection]);
             } else {
-                timeElasped = block.timestamp > startTime ? block.timestamp - startTime : 0;
+                reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
             }
 
             staked.lastHarvest = block.timestamp;
-
-            total += timeElasped;
+            amount += reward;
         }
 
-        require(total > 0, "no time has passed");
-
-        uint256 amount = total * rewardPerSecond[_collection];
-        require(amount > 0, "no reward");
-
-        minter.mintFor(msg.sender, amount);
+        if (amount > 0) {
+            minter.mintFor(msg.sender, amount);
+        }
 
         emit Claimed(msg.sender, amount);
     }
-
-    function earned(address _collection, uint256[] calldata tokenIds) external view returns (uint256 amount) {
-        uint256 tokenId;
-        uint256 total = 0;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            tokenId = tokenIds[i];
-            Stake memory staked = vault[_collection][tokenId];
-            require(staked.owner == msg.sender, "not an owner");
-
-            // start
-            uint256 timeElasped;
-            if (staked.lastHarvest > startTime) {
-                timeElasped = block.timestamp - staked.lastHarvest;
-            } else {
-                timeElasped = block.timestamp > startTime ? block.timestamp - startTime : 0;
-            }
-
-            total += timeElasped;
-        }
-
-        if (total > 0) {
-            amount = total * rewardPerSecond[_collection];
-        } else {
-            amount = 0;
-        }
-    }
-
-    // should never be used inside of transaction because of gas fee
-    // function tokensOfOwner(address account) public view returns (uint256[] memory ownerTokens) {
-
-    //   uint256 supply = nft.totalSupply();
-    //   uint256[] memory tmp = new uint256[](supply);
-
-    //   uint256 index = 0;
-    //   for(uint tokenId = 1; tokenId <= supply; tokenId++) {
-    //     if (vault[tokenId].owner == account) {
-    //       tmp[index] = vault[tokenId].tokenId;
-    //       index +=1;
-    //     }
-    //   }
-
-    //   uint256[] memory tokens = new uint256[](index);
-    //   for(uint i = 0; i < index; i++) {
-    //     tokens[i] = tmp[i];
-    //   }
-
-    //   return tokens;
-    // }
 
     function _unstakeMany(
         address account,
@@ -176,7 +210,7 @@ contract NFTStaking is Ownable, IERC721Receiver {
         uint256[] calldata tokenIds
     ) internal {
         uint256 tokenId;
-        // totalStaked -= tokenIds.length;
+        totalStaked[_collection] -= tokenIds.length;
         _claim(_collection, tokenIds);
         for (uint256 i = 0; i < tokenIds.length; i++) {
             tokenId = tokenIds[i];
@@ -184,7 +218,7 @@ contract NFTStaking is Ownable, IERC721Receiver {
             require(staked.owner == msg.sender, "not an owner");
 
             delete vault[_collection][tokenId];
-            emit NFTUnstaked(account, tokenId, block.timestamp);
+            emit NFTUnstaked(account, _collection, tokenId, block.timestamp);
             IERC721(_collection).safeTransferFrom(address(this), account, tokenId);
         }
     }
