@@ -10,4 +10,8 @@ contract ERC721mock is ERC721 {
             _safeMint(msg.sender, i);
         }
     }
+
+    function mintTo(address _to, uint256 _tokenId) external {
+        _mint(_to, _tokenId);
+    }
 }
