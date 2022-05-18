@@ -5,13 +5,13 @@ pragma solidity 0.8.3;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IToken.sol";
 
-contract Minter is Ownable {
+contract RewardStore is Ownable {
     IToken public token;
 
     mapping(address => bool) private _minters;
 
     modifier onlyMinter() {
-        require(isMinter(msg.sender) == true, ": caller is not the minter");
+        require(isMinter(msg.sender) == true, "PinkMinterV1: caller is not the minter");
         _;
     }
 
@@ -50,14 +50,11 @@ contract Minter is Ownable {
     }
 
     function _mint(address _to, uint256 _amount) internal {
-        token.mint(_to, _amount);
-        // commission for devTeam
-        uint256 forDev = (_amount * 15) / 100;
-        token.mint(owner(), forDev);
+        token.transfer(_to, _amount);
     }
 
     function rescueFunds(address _token) external onlyOwner {
-        require(_token != address(token), "wut?");
+        // require(_token != address(token), "wut?");
 
         if (_token == address(0)) {
             (bool suc, ) = msg.sender.call{value: address(this).balance}("");

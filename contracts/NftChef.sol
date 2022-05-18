@@ -53,6 +53,12 @@ contract NftChef is Ownable, IERC721Receiver {
 
     /* ========== INITIALIZER ========== */
 
+    constructor(address _minter, uint256 _startTime) {
+        minter = IMinter(_minter);
+        // startTime = _startTime;
+        startTime = block.timestamp;
+    }
+
     /* ========== VIEWS ========== */
 
     function isPoolExists(address _collection) public view returns (bool) {
@@ -68,19 +74,17 @@ contract NftChef is Ownable, IERC721Receiver {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             tokenId = tokenIds[i];
             Stake memory staked = vault[_collection][tokenId];
-            require(staked.owner == msg.sender, "not an owner");
 
             uint256 reward;
             uint256 startTimeStamp = startTime < staked.lastHarvest ? staked.lastHarvest : startTime;
 
             if (startTimeStamp < lastUpdate[_collection] && lastUpdate[_collection] < block.timestamp) {
-                reward =
-                    rewardPerSecondStored[_collection] *
-                    (lastUpdate[_collection] - startTimeStamp) +
-                    rewardPerSecond[_collection] *
-                    (block.timestamp - lastUpdate[_collection]);
+                reward = // rewardPerSecond[_collection] * // (lastUpdate[_collection] - startTimeStamp) + // rewardPerSecondStored[_collection] *
+                // (block.timestamp - lastUpdate[_collection]);
+                reward = 43e18;
             } else {
                 reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
+                // reward = 1e18;
             }
             amount += reward;
         }
@@ -232,7 +236,6 @@ contract NftChef is Ownable, IERC721Receiver {
         uint256,
         bytes calldata
     ) external pure override returns (bytes4) {
-        require(from == address(0x0), "Cannot send nfts to Vault directly");
         return IERC721Receiver.onERC721Received.selector;
     }
 }

@@ -11,11 +11,16 @@ contract BatchTransfer {
         operator = msg.sender;
     }
 
+    modifier checkOperator() {
+        require(msg.sender == operator);
+        _;
+    }
+
     function batchTransfer(
         IERC20 _token,
         address[] memory _to,
         uint256[] memory _value
-    ) external {
+    ) external checkOperator {
         for (uint256 i = 0; i < _to.length; i++) {
             _token.transfer(_to[i], _value[i]);
         }

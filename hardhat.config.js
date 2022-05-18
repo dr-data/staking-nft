@@ -18,7 +18,7 @@ module.exports = {
   networks: {
     baobab: {
       url: 'https://kaikas.baobab.klaytn.net:8651/',
-      gasPrice: 750000000000,
+      gasPrice: 250000000000,
       accounts: [PRIVATE_KEY],
       chainId: 1001,
     },

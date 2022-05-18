@@ -3,23 +3,36 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-const hre = require("hardhat");
+const { ethers } = require('hardhat');
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
-  // line interface.
-  //
-  // If this script is run directly using `node` you may want to call compile
-  // manually to make sure everything is compiled
-  // await hre.run('compile');
 
-  // We get the contract to deploy
-  const Greeter = await hre.ethers.getContractFactory("Greeter");
-  const greeter = await Greeter.deploy("Hello, Hardhat!");
+  const nftMocks = await ethers.getContractFactory('ERC721mock');
+  const tokenMocks = await ethers.getContractFactory('KlayLionsCoin');
+  const rewardStore = await ethers.getContractFactory('RewardStore');
+  const NftChef = await ethers.getContractFactory('NftChef');
+  // 91199518
+  console.log('1');
+  const nftMock = await nftMocks.deploy();
+  await nftMock.deployed();
+  const tokenMock = await tokenMocks.deploy();
+  await tokenMock.deployed();
+  const rewardStoreContract = await rewardStore.deploy();
+  await rewardStoreContract.deployed();
+  console.log('2');
+  console.log(rewardStoreContract.address);
+  await tokenMock.transfer(rewardStoreContract.address, ethers.utils.parseEther('10000'));
 
-  await greeter.deployed();
-
-  console.log("Greeter deployed to:", greeter.address);
+  const nftChef = await NftChef.deploy(rewardStoreContract.address, '91199518');
+  await nftChef.deployed();
+  await nftChef.addCollection(nftMock.address, ethers.utils.parseEther('1'));
+  await rewardStoreContract.setMinter(nftChef.address, true);
+  await rewardStoreContract.setToken(tokenMock.address);
+  console.log('nftMock', nftMock.address);
+  console.log('tokenMock', tokenMock.address);
+  console.log('rewardStoreContract', rewardStoreContract.address);
+  console.log('nftChef', nftChef.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
