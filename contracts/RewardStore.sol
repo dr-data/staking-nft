@@ -38,9 +38,6 @@ contract RewardStore is Ownable {
     }
 
     function isMinter(address _minter) public view returns (bool) {
-        if (Ownable(address(token)).owner() != address(this)) {
-            return false;
-        }
         return _minters[_minter];
     }
 

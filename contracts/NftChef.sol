@@ -79,12 +79,17 @@ contract NftChef is Ownable, IERC721Receiver {
             uint256 startTimeStamp = startTime < staked.lastHarvest ? staked.lastHarvest : startTime;
 
             if (startTimeStamp < lastUpdate[_collection] && lastUpdate[_collection] < block.timestamp) {
-                reward = // rewardPerSecond[_collection] * // (lastUpdate[_collection] - startTimeStamp) + // rewardPerSecondStored[_collection] *
-                // (block.timestamp - lastUpdate[_collection]);
-                reward = 43e18;
+                reward =
+                    rewardPerSecondStored[_collection] *
+                    (lastUpdate[_collection] - startTimeStamp) +
+                    rewardPerSecond[_collection] *
+                    (block.timestamp - lastUpdate[_collection]);
             } else {
-                reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
-                // reward = 1e18;
+                if (block.timestamp < startTimeStamp) {
+                    reward = 0;
+                } else {
+                    reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
+                }
             }
             amount += reward;
         }
@@ -219,6 +224,24 @@ contract NftChef is Ownable, IERC721Receiver {
         uint256 tokenId;
         totalStaked[_collection] -= tokenIds.length;
         _claim(_collection, tokenIds);
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            tokenId = tokenIds[i];
+            Stake memory staked = vault[_collection][tokenId];
+            require(staked.owner == msg.sender, "not an owner");
+
+            delete vault[_collection][tokenId];
+            emit NFTUnstaked(account, _collection, tokenId, block.timestamp);
+            IERC721(_collection).safeTransferFrom(address(this), account, tokenId);
+        }
+    }
+
+    function emergencyWithdraw(
+        address account,
+        address _collection,
+        uint256[] calldata tokenIds
+    ) public {
+        uint256 tokenId;
+        totalStaked[_collection] -= tokenIds.length;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             tokenId = tokenIds[i];
             Stake memory staked = vault[_collection][tokenId];

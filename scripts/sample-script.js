@@ -7,6 +7,8 @@ const { ethers } = require('hardhat');
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
+  // const NftChef = await ethers.getContractAt('NftChef', '0xe6ec1b4C7DC8346456B7f5A56d306CEB22186e7A');
+  // await NftChef.setCollection('0x2f577115EA11f89dCc4F7678e8E3210F944f8b27', ethers.utils.parseEther('500'));
 
   const nftMocks = await ethers.getContractFactory('ERC721mock');
   const tokenMocks = await ethers.getContractFactory('KlayLionsCoin');
@@ -26,7 +28,7 @@ async function main() {
 
   const nftChef = await NftChef.deploy(rewardStoreContract.address, '91199518');
   await nftChef.deployed();
-  await nftChef.addCollection(nftMock.address, ethers.utils.parseEther('1'));
+  await nftChef.addCollection(nftMock.address, ethers.utils.parseEther('0.333'));
   await rewardStoreContract.setMinter(nftChef.address, true);
   await rewardStoreContract.setToken(tokenMock.address);
   console.log('nftMock', nftMock.address);
