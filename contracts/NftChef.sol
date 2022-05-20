@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IMinter.sol";
+import "./interfaces/INftLocker.sol";
 
 import "hardhat/console.sol";
 
@@ -26,6 +27,7 @@ contract NftChef is Ownable, IERC721Receiver {
 
     // [NFT][ID] => Stake
     mapping(address => mapping(uint256 => Stake)) public vault;
+    // [NFT][USER]
 
     // 분배 비율 변경 전 리워드 분배 비율 저장
     mapping(address => uint256) public rewardPerSecondStored;
@@ -44,6 +46,8 @@ contract NftChef is Ownable, IERC721Receiver {
 
     // 리워드 시작 시점
     uint256 public startTime;
+
+    address public locker;
 
     /* ========== EVENTS ========== */
 
@@ -180,6 +184,10 @@ contract NftChef is Ownable, IERC721Receiver {
         minter = IMinter(_minter);
     }
 
+    function setLocker(address _locker) external onlyOwner {
+        locker = _locker;
+    }
+
     /* ========== INTERNAL FUNCTIONS ========== */
 
     function _claim(address _collection, uint256[] calldata tokenIds) internal {
@@ -202,7 +210,11 @@ contract NftChef is Ownable, IERC721Receiver {
                     rewardPerSecond[_collection] *
                     (block.timestamp - lastUpdate[_collection]);
             } else {
-                reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
+                if (block.timestamp < startTimeStamp) {
+                    reward = 0;
+                } else {
+                    reward = rewardPerSecond[_collection] * (block.timestamp - startTimeStamp);
+                }
             }
 
             staked.lastHarvest = block.timestamp;
@@ -231,7 +243,11 @@ contract NftChef is Ownable, IERC721Receiver {
 
             delete vault[_collection][tokenId];
             emit NFTUnstaked(account, _collection, tokenId, block.timestamp);
-            IERC721(_collection).safeTransferFrom(address(this), account, tokenId);
+
+            approveIfNeeded(_collection, locker);
+
+            INftLocker(locker).lock(account, _collection, uint24(tokenId));
+            // IERC721(_collection).safeTransferFrom(address(this), account, tokenId); // todo , go locker
         }
     }
 
@@ -250,6 +266,12 @@ contract NftChef is Ownable, IERC721Receiver {
             delete vault[_collection][tokenId];
             emit NFTUnstaked(account, _collection, tokenId, block.timestamp);
             IERC721(_collection).safeTransferFrom(address(this), account, tokenId);
+        }
+    }
+
+    function approveIfNeeded(address _collection, address _to) internal {
+        if (!IERC721(_collection).isApprovedForAll(address(this), _to)) {
+            IERC721(_collection).setApprovalForAll(_to, true);
         }
     }
 

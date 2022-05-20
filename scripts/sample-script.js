@@ -14,6 +14,7 @@ async function main() {
   const tokenMocks = await ethers.getContractFactory('KlayLionsCoin');
   const rewardStore = await ethers.getContractFactory('RewardStore');
   const NftChef = await ethers.getContractFactory('NftChef');
+  const NftLocker = await ethers.getContractFactory('NftLocker')
   // 91199518
   console.log('1');
   const nftMock = await nftMocks.deploy();
@@ -31,6 +32,10 @@ async function main() {
   await nftChef.addCollection(nftMock.address, ethers.utils.parseEther('0.333'));
   await rewardStoreContract.setMinter(nftChef.address, true);
   await rewardStoreContract.setToken(tokenMock.address);
+
+  const locker = await NftLocker.deploy(nftChef.address);
+  await locker.deployed();
+  await nftChef
   console.log('nftMock', nftMock.address);
   console.log('tokenMock', tokenMock.address);
   console.log('rewardStoreContract', rewardStoreContract.address);
