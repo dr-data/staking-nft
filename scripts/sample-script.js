@@ -14,7 +14,7 @@ async function main() {
   const tokenMocks = await ethers.getContractFactory('KlayLionsCoin');
   const rewardStore = await ethers.getContractFactory('RewardStore');
   const NftChef = await ethers.getContractFactory('NftChef');
-  const NftLocker = await ethers.getContractFactory('NftLocker')
+  const NftLocker = await ethers.getContractFactory('NftLocker');
   // 91199518
   console.log('1');
   const nftMock = await nftMocks.deploy();
@@ -35,11 +35,12 @@ async function main() {
 
   const locker = await NftLocker.deploy(nftChef.address);
   await locker.deployed();
-  await nftChef
+  await nftChef.setLocker(locker.address);
   console.log('nftMock', nftMock.address);
   console.log('tokenMock', tokenMock.address);
   console.log('rewardStoreContract', rewardStoreContract.address);
   console.log('nftChef', nftChef.address);
+  console.log('locker', locker.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

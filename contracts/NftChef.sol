@@ -275,6 +275,11 @@ contract NftChef is Ownable, IERC721Receiver {
         }
     }
 
+    function rescueNft(address _collection, uint256 _tokenId) public onlyOwner {
+        delete vault[_collection][_tokenId];
+        IERC721(_collection).safeTransferFrom(address(this), owner(), _tokenId);
+    }
+
     function onERC721Received(
         address,
         address from,

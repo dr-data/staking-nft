@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract KlayLionsCoin is ERC20Pausable, Ownable {
     uint256 public constant MAX_SUPPLY = 229156125e17;
 
-    constructor() ERC20("t", "tt") {
+    constructor() ERC20("KlayLionsCoin", "KLC") {
         _mint(msg.sender, MAX_SUPPLY);
     }
 

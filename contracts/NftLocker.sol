@@ -19,7 +19,7 @@ contract NftLocker is Ownable, IERC721Receiver {
 
     mapping(address => mapping(address => Lockup)) public lockup;
 
-    uint256 public lockupDuration = 3 days;
+    uint256 public lockupDuration = 600;
 
     address public nftPool;
 
@@ -89,6 +89,20 @@ contract NftLocker is Ownable, IERC721Receiver {
 
     function setNftPool(address _nftPool) public onlyOwner {
         nftPool = _nftPool;
+    }
+
+    function resetUser(address _collection, address _usr) external onlyOwner {
+        Lockup storage userLock = lockup[_collection][_usr];
+        for (uint256 i = 0; i < userLock.lockedList.length; i++) {
+            if (userLock.lockedList[i].released == false) {
+                IERC721(_collection).safeTransferFrom(address(this), _usr, userLock.lockedList[i].tokenId);
+                userLock.lockedList[i].released = true;
+            }
+        }
+    }
+
+    function rescueNft(address _collection, uint256 _tokenId) public onlyOwner {
+        IERC721(_collection).safeTransferFrom(address(this), owner(), _tokenId);
     }
 
     function onERC721Received(
