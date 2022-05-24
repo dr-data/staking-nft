@@ -19,7 +19,7 @@ contract NftLocker is Ownable, IERC721Receiver {
 
     mapping(address => mapping(address => Lockup)) public lockup;
 
-    uint256 public lockupDuration = 600;
+    uint256 public lockupDuration = 1200;
 
     address public nftPool;
 

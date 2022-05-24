@@ -11,14 +11,14 @@ async function main() {
   // await NftChef.setCollection('0x2f577115EA11f89dCc4F7678e8E3210F944f8b27', ethers.utils.parseEther('500'));
 
   const nftMocks = await ethers.getContractFactory('ERC721mock');
-  const tokenMocks = await ethers.getContractFactory('KlayLionsCoin');
+  const tokenMocks = await ethers.getContractFactory('ERC20mock');
   const rewardStore = await ethers.getContractFactory('RewardStore');
   const NftChef = await ethers.getContractFactory('NftChef');
   const NftLocker = await ethers.getContractFactory('NftLocker');
   // 91199518
   console.log('1');
-  const nftMock = await nftMocks.deploy();
-  await nftMock.deployed();
+  // const nftMock = await nftMocks.deploy();
+  // await nftMock.deployed();
   const tokenMock = await tokenMocks.deploy();
   await tokenMock.deployed();
   const rewardStoreContract = await rewardStore.deploy();
@@ -29,14 +29,16 @@ async function main() {
 
   const nftChef = await NftChef.deploy(rewardStoreContract.address, '91199518');
   await nftChef.deployed();
-  await nftChef.addCollection(nftMock.address, ethers.utils.parseEther('0.333'));
+  // 0xa91b7e5853683cd01db8817d1582db5bb966a162
+  // await nftChef.addCollection(nftMock.address, ethers.utils.parseEther('0.0000115740741'));
+  await nftChef.addCollection('0xa91b7e5853683cd01db8817d1582db5bb966a162', ethers.utils.parseEther('0.0000115740741'));
   await rewardStoreContract.setMinter(nftChef.address, true);
   await rewardStoreContract.setToken(tokenMock.address);
 
   const locker = await NftLocker.deploy(nftChef.address);
   await locker.deployed();
   await nftChef.setLocker(locker.address);
-  console.log('nftMock', nftMock.address);
+  console.log('nftMock', '0xa91b7e5853683cd01db8817d1582db5bb966a162');
   console.log('tokenMock', tokenMock.address);
   console.log('rewardStoreContract', rewardStoreContract.address);
   console.log('nftChef', nftChef.address);

@@ -28,7 +28,7 @@ module.exports = {
       accounts: [PRIVATE_KEY],
       gas: 8500000,
       timeout: 3000000,
-      gasPrice: 750000000000,
+      gasPrice: 250000000000,
     },
   },
 };
